@@ -84,6 +84,20 @@ device-sim> [press CTRL-C]
 [INFO] Connection cancelled.
 ```
 
+### Phase 4: Signal Architecture Fix (Commit b60a854)
+
+**Critical Issues:**
+1. **Signal Suppression** - Custom handler set a flag but swallowed the exception.
+2. **Blocking Calls** - `time.sleep` and `WaitForSingleObject` didn't wake up on flag change.
+
+**Solutions Implemented:**
+- **Removed Custom Handler:** Deleted `signal.signal(SIGINT, ...)` registration.
+- **Native Exceptions:** Allowed Python's native `KeyboardInterrupt` to propagate.
+- **Immediate Exit:** Exceptions now immediately break blocking calls.
+
+**Result:**
+Pressing CTRL-C now instantly raises an exception that is caught by our cleanup logic, ensuring immediate shutdown.
+
 ## Testing
 
 ### Validation Testing (Phase 1)
