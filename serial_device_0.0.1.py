@@ -278,7 +278,7 @@ class CiscoLikeDevice:
             'h': self._cmd_help,  # Short alias for help
         }
         
-        signal.signal(signal.SIGINT, self._signal_handler)
+        # signal.signal(signal.SIGINT, self._signal_handler) removed to allow KeyboardInterrupt
     
     def _load_cmdfile(self, filepath):
         """Load custom commands from file"""
@@ -295,8 +295,8 @@ class CiscoLikeDevice:
         except Exception as e:
             self._send_output(f"ERROR: Failed to load command file: {e}\n")
     
-    def _signal_handler(self, sig, frame):
-        self.keep_running = False
+    # def _signal_handler(self, sig, frame):
+    #     self.keep_running = False
     
     def _send_output(self, data):
         """Send output to serial/pipe with proper line endings"""

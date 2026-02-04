@@ -192,3 +192,8 @@ Possible enhancements:
    - **Problem**: `ConnectNamedPipe` blocked indefinitely on Windows if no client connected, making the script unresponsive to CTRL-C during startup.
    - **Solution**: Implemented Overlapped I/O for connection waiting. The script now waits in 100ms intervals, checking for signals between checks.
    - **Result**: You can now cancel the "Waiting for client connection..." state using CTRL-C.
+
+### 13. **Signal Handler Removal** (Commit update)
+   - **Problem**: Custom SIGINT handler suppressed `KeyboardInterrupt` exceptions, preventing immediate exit from blocking waits (like `time.sleep`).
+   - **Solution**: Removed custom signal handler to allow Python's native `KeyboardInterrupt` to propagate naturally.
+   - **Result**: CTRL-C now immediately interrupts sleep and wait loops.
