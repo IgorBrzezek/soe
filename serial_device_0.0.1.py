@@ -275,6 +275,7 @@ class CiscoLikeDevice:
             'history': self._cmd_history,
             '?': self._cmd_help,
             'help': self._cmd_help,
+            'h': self._cmd_help,  # Short alias for help
         }
         
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -298,17 +299,22 @@ class CiscoLikeDevice:
         self.keep_running = False
     
     def _send_output(self, data):
-        """Send output to serial/pipe"""
+        """Send output to serial/pipe with proper line endings"""
         if isinstance(data, str):
             data = data.encode()
         try:
             if self.ser_obj:
                 if sys.platform == "win32" and self.pipe_connected:
-                    win32file.WriteFile(self.ser_obj, data)
+                    try:
+                        win32file.WriteFile(self.ser_obj, data)
+                    except Exception as e:
+                        if self.args.debug:
+                            print(f"[DEBUG] Write error: {e}")
                 elif sys.platform != "win32":
                     self.ser_obj.write(data)
-        except:
-            pass
+        except Exception as e:
+            if self.args.debug:
+                print(f"[DEBUG] Send output error: {e}")
     
     def _get_prompt(self):
         """Generate prompt like Cisco device"""
@@ -531,10 +537,13 @@ Custom Commands:
                     )
                     print(f"[INFO] Serial port opened successfully ({self.args.line} format)")
                     
-                    # Flush any existing data
+                    # Flush any existing data and configure port
                     time.sleep(0.1)
-                    self.ser_obj.reset_input_buffer()
-                    self.ser_obj.reset_output_buffer()
+                    try:
+                        self.ser_obj.reset_input_buffer()
+                        self.ser_obj.reset_output_buffer()
+                    except:
+                        pass  # Some ports don't support this
                     
                 except serial.SerialException as e:
                     print(f"[ERROR] Failed to open serial port {self.args.comport}: {e}")
@@ -547,21 +556,26 @@ Custom Commands:
                     print(f"[ERROR] Unexpected error opening serial port: {e}")
                     return
             
-            # Send login banner
+            # Send login banner with proper line endings
             if self.args.login_banner:
-                self._send_output(f"\n{self.args.login_message}\n\n")
-                self._send_output(self._get_prompt())
+                self._send_output(f"\r\n{self.args.login_message}\r\n\r\n")
             
             print(f"[INFO] Device simulator is running. Type 'exit' to quit.")
             print(f"[INFO] Hostname: {self.hostname}")
+            print(f"[INFO] Press CTRL-C to shutdown gracefully.\n")
+            
+            # Send initial prompt
+            self._send_output(self._get_prompt())
             
             # Main loop
             input_buffer = ""
+            last_activity = time.time()
+            
             while self.keep_running:
                 try:
                     data = b""
                     
-                    # Read from serial/pipe
+                    # Read from serial/pipe with timeout to allow CTRL-C handling
                     if use_named_pipe and self.pipe_connected:
                         try:
                             err, data = win32file.ReadFile(self.ser_obj, 4096)
@@ -576,6 +590,7 @@ Custom Commands:
                             data = self.ser_obj.read(bytes_waiting)
                     
                     if data:
+                        last_activity = time.time()
                         try:
                             input_buffer += data.decode(errors='replace')
                         except AttributeError:
@@ -604,21 +619,49 @@ Custom Commands:
                                     if self.args.debug:
                                         print(f"[DEBUG] Command received: {cmd_line}")
                                     
-                                    # Echo command
-                                    self._send_output(cmd_line + "\n")
+                                    # Echo command with proper line ending
+                                    self._send_output(cmd_line + "\r\n")
+                                    
+                                    # Flush after echo
+                                    if hasattr(self.ser_obj, 'flush'):
+                                        try:
+                                            self.ser_obj.flush()
+                                        except:
+                                            pass
                                     
                                     # Process and send output
                                     output = self.process_command(cmd_line)
                                     if output:
+                                        # Ensure output ends with proper line ending
+                                        if not output.endswith(('\n', '\r\n', '\r')):
+                                            output += "\r\n"
                                         self._send_output(output)
+                                    
+                                    # Flush after output
+                                    if hasattr(self.ser_obj, 'flush'):
+                                        try:
+                                            self.ser_obj.flush()
+                                        except:
+                                            pass
                                 
-                                # Send prompt
+                                # Send prompt with proper line ending
                                 self._send_output(self._get_prompt())
+                                
+                                # Final flush
+                                if hasattr(self.ser_obj, 'flush'):
+                                    try:
+                                        self.ser_obj.flush()
+                                    except:
+                                        pass
                             else:
                                 break
                     
-                    time.sleep(0.01)
+                    # Allow CTRL-C to be processed more responsively
+                    # Use smaller sleep intervals for better signal handling
+                    time.sleep(0.1)
                 
+                except KeyboardInterrupt:
+                    raise  # Re-raise to outer exception handler
                 except Exception as e:
                     if self.args.debug:
                         print(f"[DEBUG] Error in main loop: {e}")
