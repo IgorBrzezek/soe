@@ -746,7 +746,7 @@ def load_hierarchical_config():
                 pass
 
     # Override with command line arguments
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     parser.add_argument('-p', '--port', type=int)
     parser.add_argument('-a', '--address')
     parser.add_argument('--comport')

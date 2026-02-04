@@ -1189,7 +1189,7 @@ def load_hierarchical_config():
                     print(f"[WARNING] Failed to parse config file '{path}': {e}")
                 pass
 
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     parser.add_argument("-H", "--host"); parser.add_argument("-p", "--port", type=int)
     parser.add_argument("--comport"); parser.add_argument("--namedpipe"); parser.add_argument("--baud", type=int); parser.add_argument("--line")
     parser.add_argument("--keepalive", type=int); parser.add_argument("--secauto", action="store_true", default=False)
