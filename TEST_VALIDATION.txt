@@ -1,0 +1,128 @@
+SERIAL DEVICE SIMULATOR v0.0.1 - VALIDATION TEST GUIDE
+=====================================================
+
+Quick Testing of Fixed Issues
+All these tests now show proper error messages and prevent invalid execution.
+
+
+TEST 1: Reject typo in option name
+================================
+Command: python serial_device_0.0.1.py --namedpi test
+Expected: [ERROR] Unknown options detected: --namedpi
+Status: ✓ PASS
+
+
+TEST 2: Reject invalid baud rate
+================================
+Command: python serial_device_0.0.1.py --comport COM1 --baud 999999
+Expected: [ERROR] Invalid baud rate: 999999
+          [ERROR] Valid rates: 110, 300, 600, ...
+Status: ✓ PASS
+
+
+TEST 3: Reject invalid line format
+==================================
+Command: python serial_device_0.0.1.py --comport COM1 --line 99Z99
+Expected: [ERROR] Invalid line format: 99Z99
+          [ERROR] Format: [DataBits][Parity][StopBits][FlowControl]
+Status: ✓ PASS
+
+
+TEST 4: Reject invalid COM port format
+======================================
+Command: python serial_device_0.0.1.py --comport INVALID
+Expected: [ERROR] Invalid COM port: INVALID
+          [ERROR] Valid format: COM1, COM2, COM3, etc.
+Status: ✓ PASS
+
+
+TEST 5: Require connection method
+=================================
+Command: python serial_device_0.0.1.py
+Expected: [ERROR] No connection method specified!
+          Shows helpful examples
+Status: ✓ PASS
+
+
+TEST 6: Show comprehensive help
+===============================
+Command: python serial_device_0.0.1.py --help
+Expected: Full help with all options, formats, and examples
+Status: ✓ PASS
+
+
+TEST 7: Serial port error with diagnostics
+==========================================
+Command: python serial_device_0.0.1.py --comport COM99 (non-existent port)
+Expected: [ERROR] Failed to open serial port COM99
+          [ERROR] Possible causes:
+          [ERROR]   - Port does not exist
+          [ERROR]   - Port is already in use
+          [ERROR]   - Insufficient permissions (try as admin/root)
+Status: ✓ PASS
+
+
+TEST 8: Accept valid baud rates
+==============================
+Command: python serial_device_0.0.1.py --comport COM1 --baud 115200
+Expected: Script starts (tries to connect to port)
+Note: Script will fail if COM1 doesn't exist (expected)
+Status: ✓ PASS (validation accepted)
+
+
+TEST 9: Accept valid line formats
+================================
+Command: python serial_device_0.0.1.py --comport COM1 --line 8N2N
+Expected: Script starts (tries to connect to port)
+Status: ✓ PASS (validation accepted)
+
+
+TEST 10: Accept valid COM port format
+====================================
+Command: python serial_device_0.0.1.py --comport COM1
+Expected: Script tries to connect to COM1
+Status: ✓ PASS (validation accepted)
+
+
+TEST 11: Reject non-existent command file
+=========================================
+Command: python serial_device_0.0.1.py --comport COM1 --cmdfile /missing/file.txt
+Expected: [ERROR] Command file not found: /missing/file.txt
+Status: ✓ PASS
+
+
+TEST 12: Reject both --comport and --namedpipe
+==============================================
+Command: python serial_device_0.0.1.py --comport COM1 --namedpipe test
+Expected: [ERROR] Cannot specify both --comport and --namedpipe
+Status: ✓ PASS
+
+
+VALID COMMAND EXAMPLES (for actual testing):
+=============================================
+
+1. Start simulator on Windows serial port COM1:
+   python serial_device_0.0.1.py --comport COM1 --hostname myrouter
+
+2. Start simulator on Linux serial port:
+   python serial_device_0.0.1.py --comport /dev/ttyUSB0 --hostname myrouter
+
+3. Start simulator on Windows named pipe (requires pywin32):
+   python serial_device_0.0.1.py --namedpipe mydevice --hostname myrouter
+
+4. Custom baud rate and line format:
+   python serial_device_0.0.1.py --comport COM1 --baud 115200 --line 8N2N --hostname router
+
+5. With debugging output:
+   python serial_device_0.0.1.py --comport COM1 --debug
+
+6. Load custom commands from file:
+   python serial_device_0.0.1.py --comport COM1 --cmdfile commands.txt
+
+7. With custom banner message:
+   python serial_device_0.0.1.py --comport COM1 --login-message "Welcome to my device"
+
+
+All validation happens BEFORE attempting any connection.
+Invalid options cause immediate exit with exit code 1.
+No silent failures - all errors are clearly reported.
