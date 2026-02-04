@@ -215,16 +215,19 @@ class SoEClient:
             
             # FIX: Always show status line even with --notui if --count is used
             if not self.args.notui or self.args.count:
-                t_col = UiColors._UI_COL_FG_STATUSLINE_
-                bot_styled = (f" {t_col}SRV ({UiColors._UI_COL_CL_VERSION_}{self.server_version}{t_col}) | "
-                               f"L: {UiColors._UI_COL_LIP_}{l_ip}{t_col}:{UiColors._UI_COL_LPORT_}{l_port}{t_col} | "
-                               f"R: {UiColors._UI_COL_RIP_}{r_ip}{t_col}:{UiColors._UI_COL_RPORT_}{r_port}{t_col} | "
-                               f"S: {UiColors._UI_COL_RPORTSPEED_}{self.remote_params}{t_col} ")
-                
-                if self.args.count:
-                    bot_styled += f"| IN:{self.recv_count} OUT:{self.sent_count} "
-                
-                bot_line = f"{UiColors._UI_COL_BG_STATUSLINE_}{t_col}{bot_styled.ljust(self.cols + (len(bot_styled) - len(bot_plain)))}{Colors.RESET}"
+                if self.args.color:
+                    t_col = UiColors._UI_COL_FG_STATUSLINE_
+                    bot_styled = (f" {t_col}SRV ({UiColors._UI_COL_CL_VERSION_}{self.server_version}{t_col}) | "
+                                   f"L: {UiColors._UI_COL_LIP_}{l_ip}{t_col}:{UiColors._UI_COL_LPORT_}{l_port}{t_col} | "
+                                   f"R: {UiColors._UI_COL_RIP_}{r_ip}{t_col}:{UiColors._UI_COL_RPORT_}{r_port}{t_col} | "
+                                   f"S: {UiColors._UI_COL_RPORTSPEED_}{self.remote_params}{t_col} ")
+                    
+                    if self.args.count:
+                        bot_styled += f"| IN:{self.recv_count} OUT:{self.sent_count} "
+                    
+                    bot_line = f"{UiColors._UI_COL_BG_STATUSLINE_}{t_col}{bot_styled.ljust(self.cols + (len(bot_styled) - len(bot_plain)))}{Colors.RESET}"
+                else:
+                    bot_line = f"{Colors.INVERSE}{bot_plain.ljust(self.cols)}{Colors.RESET}"
             else:
                 bot_line = f"{Colors.INVERSE}{bot_plain.ljust(self.cols)}{Colors.RESET}"
 
