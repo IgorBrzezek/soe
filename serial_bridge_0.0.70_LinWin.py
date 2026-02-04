@@ -444,9 +444,7 @@ class SerialBridgeNode:
             except: pass
         if self.net_conn:
             try:
-                self.net_conn.setblocking(True)
-                self.net_conn.sendall(DISCONNECT_CMD)
-                # Force close socket to interrupt select() call immediately
+                # Just close the socket immediately - don't send or block
                 self.net_conn.close()
             except:
                 pass
@@ -718,11 +716,21 @@ class SerialBridgeNode:
                 try:
                     # Check exit flag before select to exit faster on CTRL-C
                     if not self.keep_running: break
-                    r, _, _ = select.select([self.net_conn], [], [], 0.01)
+                    try:
+                        r, _, _ = select.select([self.net_conn], [], [], 0.01)
+                    except (OSError, socket.error):
+                        # Socket was closed by signal handler
+                        if not self.keep_running: break
+                        raise
                     # Check exit flag immediately after select returns
                     if not self.keep_running: break
                     if self.net_conn in r:
-                        data = self.net_conn.recv(16384)
+                        try:
+                            data = self.net_conn.recv(16384)
+                        except (OSError, socket.error):
+                            # Socket was closed - this is OK if keep_running is False
+                            if not self.keep_running: break
+                            raise
                         # Detect server disconnect: empty data means connection closed
                         if not data:
                             self.log("Server disconnected.", UiColors._UI_COL_INFO_)
@@ -1007,11 +1015,12 @@ def validate_args(args):
 
 def load_hierarchical_config():
     config = DEFAULT_CONFIG.copy()
-    config_paths = ["/etc/soe/soebridge.conf", "soebridge.conf"]
     temp_parser = argparse.ArgumentParser(add_help=False)
     temp_parser.add_argument("--cfgfile")
     temp_args, _ = temp_parser.parse_known_args()
-    if temp_args.cfgfile: config_paths.append(temp_args.cfgfile)
+    config_paths = []
+    if temp_args.cfgfile:
+        config_paths.append(temp_args.cfgfile)
     
     for path in config_paths:
         if os.path.exists(path):
