@@ -553,6 +553,133 @@ DEFAULT_CONFIG = {
     'version': False
 }
 
+def validate_args(args):
+    """Validate command line arguments and configuration values"""
+    
+    # Check port is provided and valid
+    if args.port is None:
+        print("[ERROR] Port is mandatory. Use -p PORT or port in config file.")
+        return False
+    if not isinstance(args.port, int) or args.port <= 0 or args.port > 65535:
+        print(f"[ERROR] Invalid port number: {args.port}. Must be between 1 and 65535.")
+        return False
+    
+    # Check address is valid
+    if args.address:
+        import socket as sock_check
+        try:
+            sock_check.inet_aton(args.address)
+        except sock_check.error:
+            print(f"[ERROR] Invalid IP address: {args.address}")
+            return False
+    
+    # Check that either --comport or --namedpipe is provided, but not both
+    has_comport = args.comport is not None
+    has_namedpipe = args.namedpipe is not None
+    
+    if has_comport and has_namedpipe:
+        print("[ERROR] Cannot use both --comport and --namedpipe simultaneously. Choose one.")
+        return False
+    
+    if not has_comport and not has_namedpipe:
+        print("[ERROR] Either --comport or --namedpipe must be specified.")
+        return False
+    
+    # Validate --namedpipe on Windows only
+    if has_namedpipe and sys.platform != "win32":
+        print("[ERROR] --namedpipe is only available on Windows. Use --comport on Linux/Mac.")
+        return False
+    
+    # Validate baud rate
+    valid_bauds = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
+    if args.baud not in valid_bauds:
+        print(f"[ERROR] Invalid baud rate: {args.baud}. Valid values: {valid_bauds}")
+        return False
+    
+    # Validate line format (should be 4 chars: DataBits[5-8], Parity[N/O/E], StopBits[1/2], Flow[N/X/H])
+    if not isinstance(args.line, str) or len(args.line) != 4:
+        print(f"[ERROR] Invalid line format: {args.line}. Must be 4 characters (e.g., 8N1N).")
+        return False
+    
+    data_bits = args.line[0]
+    parity = args.line[1]
+    stop_bits = args.line[2]
+    flow = args.line[3]
+    
+    if data_bits not in ['5', '6', '7', '8']:
+        print(f"[ERROR] Invalid data bits in line format: {data_bits}. Must be 5, 6, 7, or 8.")
+        return False
+    
+    if parity not in ['N', 'O', 'E', 'M', 'S']:
+        print(f"[ERROR] Invalid parity in line format: {parity}. Must be N(one), O(dd), E(ven), M(ark), or S(pace).")
+        return False
+    
+    if stop_bits not in ['1', '2']:
+        print(f"[ERROR] Invalid stop bits in line format: {stop_bits}. Must be 1 or 2.")
+        return False
+    
+    if flow not in ['N', 'X', 'H', 'R']:
+        print(f"[ERROR] Invalid flow control in line format: {flow}. Must be N(one), X(on/Xoff), H(ardware RTS/CTS), or R(TS/CTS).")
+        return False
+    
+    # Validate keepalive
+    if not isinstance(args.keepalive, int) or args.keepalive < 0:
+        print(f"[ERROR] Invalid keepalive value: {args.keepalive}. Must be non-negative integer.")
+        return False
+    
+    # Validate SSL options
+    if args.secauto and args.sec:
+        print("[ERROR] Cannot use both --secauto and --sec simultaneously. Choose one SSL method.")
+        return False
+    
+    # Validate logmax and logsizemax
+    if not isinstance(args.logmax, int) or args.logmax < 1:
+        print(f"[ERROR] Invalid logmax: {args.logmax}. Must be at least 1.")
+        return False
+    
+    if not isinstance(args.logsizemax, int) or args.logsizemax < 1:
+        print(f"[ERROR] Invalid logsizemax: {args.logsizemax}. Must be at least 1.")
+        return False
+    
+    # Validate logdatamax and logdatasizemax
+    if not isinstance(args.logdatamax, int) or args.logdatamax < 1:
+        print(f"[ERROR] Invalid logdatamax: {args.logdatamax}. Must be at least 1.")
+        return False
+    
+    if not isinstance(args.logdatasizemax, int) or args.logdatasizemax < 1:
+        print(f"[ERROR] Invalid logdatasizemax: {args.logdatasizemax}. Must be at least 1.")
+        return False
+    
+    # Validate buffer lines
+    if not isinstance(args.logbufferlines, int) or args.logbufferlines < 10:
+        print(f"[ERROR] Invalid logbufferlines: {args.logbufferlines}. Must be at least 10.")
+        return False
+    
+    if not isinstance(args.transferbufferlines, int) or args.transferbufferlines < 10:
+        print(f"[ERROR] Invalid transferbufferlines: {args.transferbufferlines}. Must be at least 10.")
+        return False
+    
+    # Validate showtransfer format if provided
+    if args.showtransfer:
+        parts = args.showtransfer.split(',')
+        if len(parts) > 0:
+            fmt = parts[0].lower()
+            if fmt not in ['ascii', 'hex']:
+                print(f"[ERROR] Invalid showtransfer format: {fmt}. Must be 'ascii' or 'hex'.")
+                return False
+        if len(parts) > 1:
+            direction = parts[1].lower()
+            if direction not in ['in', 'out', 'all']:
+                print(f"[ERROR] Invalid showtransfer direction: {direction}. Must be 'in', 'out', or 'all'.")
+                return False
+    
+    # Validate color options
+    if args.color and args.mono:
+        print("[ERROR] Cannot use both --color and --mono. Choose one.")
+        return False
+    
+    return True
+
 def load_hierarchical_config():
     config = DEFAULT_CONFIG.copy()
     temp_parser = argparse.ArgumentParser(add_help=False)
@@ -717,21 +844,12 @@ def main():
     state.log_file_path, state.logdata_file_path = _get_log_filename(args.log, args.logmax), _get_log_filename(args.logdata, args.logdatamax)
     if args.version: print(f"{__CODE_NAME__} ({__CODE_VERSION__})"); sys.exit(0)
     if sys.platform == "win32" and not args.batch: os.system('color')
-    
-    # Validate named pipe usage
-    if args.namedpipe and sys.platform != "win32":
-        print("\n[ERROR] Named pipe option (--namedpipe) is only available on Windows.\n")
+
+    # Comprehensive argument validation
+    if not validate_args(args):
         sys.exit(1)
     
-    # Check if both --comport and --namedpipe were explicitly specified
-    # by checking if comport is different from default OR if it was passed in command line
-    if args.namedpipe:
-        # Check if comport was explicitly set in command line (not from config)
-        import sys as sys_check
-        if '--comport' in sys_check.argv:
-            print("\n[ERROR] Cannot use both --comport and --namedpipe options simultaneously.\n")
-            sys.exit(1)
-    
+    # Validate named pipe usage
     state.server_start_time = time.time(); refresh_screen()
     log_msg("# --- SoE server is starting ---", Colors.GREEN)
     

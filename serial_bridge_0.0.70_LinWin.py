@@ -986,31 +986,121 @@ class SerialBridgeNode:
             sys.stdout.write(summary); sys.stdout.flush()
 
 def validate_args(args):
+    # Validate command line arguments and configuration values
     is_ask = getattr(args, 'ask', False)
     is_namedpipe = getattr(args, 'namedpipe', None) is not None
     has_comport = getattr(args, 'comport', None) is not None
     has_serial = has_comport or is_namedpipe
     
-    if not all([args.host, args.port, has_serial]) and not is_ask:
-        if not args.batch: print("[ERROR] Missing mandatory parameters: -H, -p, --comport or --namedpipe")
-        else: sys.stderr.write("[ERROR] Missing mandatory parameters: -H, -p, --comport or --namedpipe\n")
-        return False
-    if is_ask and not all([args.host, args.port]):
-        if not args.batch: print("[ERROR] --ask requires: -H and -p")
-        else: sys.stderr.write("[ERROR] --ask requires: -H and -p\n")
+    # Check mandatory parameters: host and port (except for --ask)
+    if not is_ask:
+        if not args.host:
+            print("[ERROR] Host is mandatory. Use: -H HOST")
+            return False
+        if not args.port:
+            print("[ERROR] Port is mandatory. Use: -p PORT")
+            return False
+        if not isinstance(args.port, int) or args.port <= 0 or args.port > 65535:
+            print(f"[ERROR] Invalid port: {args.port}. Must be 1-65535")
+            return False
+        if not has_serial:
+            print("[ERROR] Either --comport or --namedpipe must be specified")
+            return False
+    
+    # Check --ask option requirements
+    if is_ask:
+        if not args.host:
+            print("[ERROR] --ask requires: -H HOST")
+            return False
+        if not args.port:
+            print("[ERROR] --ask requires: -p PORT")
+            return False
+        if not isinstance(args.port, int) or args.port <= 0 or args.port > 65535:
+            print(f"[ERROR] Invalid port: {args.port}. Must be 1-65535")
+            return False
+    
+    # Check SSL options
+    if args.secauto and args.sec:
+        print("[ERROR] Cannot use both --secauto and --sec. Choose one SSL method")
         return False
     if (args.secauto or args.sec) and not args.pwd:
-        if not args.batch: print("[ERROR] Security mode requires a password (--pwd).")
-        else: sys.stderr.write("[ERROR] Security mode requires a password (--pwd)\n")
+        print("[ERROR] SSL mode (--secauto or --sec) requires --pwd PASSWORD")
         return False
+    
+    # Check --namedpipe platform support
     if is_namedpipe and sys.platform != "win32":
-        if not args.batch: print("[ERROR] --namedpipe only supported on Windows")
-        else: sys.stderr.write("[ERROR] --namedpipe only supported on Windows\n")
+        print("[ERROR] --namedpipe is only on Windows. Use --comport on Linux/Mac")
         return False
     if is_namedpipe and sys.platform == "win32" and not WIN32_AVAILABLE:
-        if not args.batch: print("[ERROR] --namedpipe requires pywin32. Run: pip install pywin32")
-        else: sys.stderr.write("[ERROR] --namedpipe requires pywin32. Run: pip install pywin32\n")
+        print("[ERROR] --namedpipe requires pywin32. Run: pip install pywin32")
         return False
+    
+    # Check both --comport and --namedpipe not used together
+    if has_comport and is_namedpipe:
+        print("[ERROR] Cannot use both --comport and --namedpipe. Choose one")
+        return False
+    
+    # Validate baud rate
+    valid_bauds = [300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
+    if args.baud not in valid_bauds:
+        print(f"[ERROR] Invalid baud rate: {args.baud}. Valid: {valid_bauds}")
+        return False
+    
+    # Validate line format (4 chars: DataBits, Parity, StopBits, Flow)
+    if not isinstance(args.line, str) or len(args.line) != 4:
+        print(f"[ERROR] Invalid line format: {args.line}. Must be 4 chars (e.g., 8N1N)")
+        return False
+    
+    if args.line[0] not in ['5', '6', '7', '8']:
+        print(f"[ERROR] Invalid data bits: {args.line[0]}. Must be 5-8")
+        return False
+    if args.line[1] not in ['N', 'O', 'E', 'M', 'S']:
+        print(f"[ERROR] Invalid parity: {args.line[1]}. Must be N/O/E/M/S")
+        return False
+    if args.line[2] not in ['1', '2']:
+        print(f"[ERROR] Invalid stop bits: {args.line[2]}. Must be 1 or 2")
+        return False
+    if args.line[3] not in ['N', 'X', 'H', 'R']:
+        print(f"[ERROR] Invalid flow control: {args.line[3]}. Must be N/X/H/R")
+        return False
+    
+    # Validate keepalive
+    if not isinstance(args.keepalive, int) or args.keepalive < 0:
+        print(f"[ERROR] Invalid keepalive: {args.keepalive}. Must be 0 or positive")
+        return False
+    
+    # Validate log parameters
+    if not isinstance(args.logmax, int) or args.logmax < 1:
+        print(f"[ERROR] Invalid logmax: {args.logmax}. Must be >= 1")
+        return False
+    if not isinstance(args.logsizemax, int) or args.logsizemax < 1:
+        print(f"[ERROR] Invalid logsizemax: {args.logsizemax}. Must be >= 1")
+        return False
+    if not isinstance(args.logdatamax, int) or args.logdatamax < 1:
+        print(f"[ERROR] Invalid logdatamax: {args.logdatamax}. Must be >= 1")
+        return False
+    if not isinstance(args.logdatasizemax, int) or args.logdatasizemax < 1:
+        print(f"[ERROR] Invalid logdatasizemax: {args.logdatasizemax}. Must be >= 1")
+        return False
+    
+    # Validate buffer lines
+    if not isinstance(args.logbufferlines, int) or args.logbufferlines < 10:
+        print(f"[ERROR] Invalid logbufferlines: {args.logbufferlines}. Must be >= 10")
+        return False
+    if not isinstance(args.transferbufferlines, int) or args.transferbufferlines < 10:
+        print(f"[ERROR] Invalid transferbufferlines: {args.transferbufferlines}. Must be >= 10")
+        return False
+    
+    # Validate showtransfer format
+    if args.showtransfer:
+        parts = args.showtransfer.split(',')
+        if len(parts) > 0 and parts[0].lower() not in ['ascii', 'hex']:
+            print(f"[ERROR] Invalid showtransfer format: {parts[0]}. Must be ascii or hex")
+            return False
+        if len(parts) > 1 and parts[1].lower() not in ['in', 'out', 'all']:
+            print(f"[ERROR] Invalid showtransfer direction: {parts[1]}. Must be in/out/all")
+            return False
+    
     return True
 
 def load_hierarchical_config():
