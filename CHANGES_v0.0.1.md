@@ -182,3 +182,8 @@ Possible enhancements:
 3. Port existence detection before attempt to open
 4. Serial port discovery and listing (`--list-ports`)
 5. Connection timeout configuration
+
+### 11. **Blocking Named Pipe Read Fixed** (Commit update)
+   - **Problem**: On Windows, `win32file.ReadFile` blocks execution if no data is present, preventing CTRL-C signal handling.
+   - **Solution**: Implemented `win32pipe.PeekNamedPipe` to check for data availability before reading.
+   - **Result**: Main loop remains responsive to interrupts even when no data is arriving.

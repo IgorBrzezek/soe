@@ -578,8 +578,25 @@ Custom Commands:
                     # Read from serial/pipe with timeout to allow CTRL-C handling
                     if use_named_pipe and self.pipe_connected:
                         try:
-                            err, data = win32file.ReadFile(self.ser_obj, 4096)
+                            # Use PeekNamedPipe to check for data without blocking
+                            # This allows the loop to run and process signals (CTRL-C)
+                            _, _, total_bytes_avail, _ = win32pipe.PeekNamedPipe(self.ser_obj, 0)
+                            
+                            if total_bytes_avail > 0:
+                                err, data = win32file.ReadFile(self.ser_obj, total_bytes_avail)
+                            else:
+                                data = b""
                         except Exception as e:
+                            # Check for broken pipe (client disconnected)
+                            if isinstance(e, pywintypes.error) and e.winerror == 109: # ERROR_BROKEN_PIPE
+                                print("[INFO] Client disconnected from pipe")
+                                # Wait for new connection or exit?
+                                # For simple sim, just reconnect logic or clear pipe
+                                win32pipe.DisconnectNamedPipe(self.ser_obj)
+                                win32pipe.ConnectNamedPipe(self.ser_obj, None)
+                                print("[INFO] Client reconnected")
+                                continue
+                            
                             if self.args.debug:
                                 print(f"[DEBUG] Pipe read error: {e}")
                             data = b""
