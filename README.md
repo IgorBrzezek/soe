@@ -58,6 +58,7 @@ The SoE system consists of **three main components** that work together in diffe
 + terminal app line putty, MobaXterm
 
 ### Simple Architecture of SoE:
+```
 
 		[Serial Device]
 			  |
@@ -79,6 +80,8 @@ The SoE system consists of **three main components** that work together in diffe
 				  |              |
 				  |              |
 		<terminal> (putty)      <MobaXterm>
+
+```
 
 ### Architecture Diagram 1: Three-Component System Overview
 
