@@ -1,6 +1,6 @@
 # ==============================================================================
 # Serial over Ethernet Bridge
-# Version: 0.0.68 [FIX: Proper DEFAULT_CONFIG Fallback]
+# Version: 0.0.70 [FIX: Proper DEFAULT_CONFIG Fallback]
 # Date: 04.02.2026
 # Author: Igor Brzezek
 # ==============================================================================
@@ -47,7 +47,7 @@ except ImportError:
 
 __APP_NAME__    = "Serial over Ethernet Bridge"
 __CODE_AUTHOR__  = "Igor Brzezek"
-__CODE_VERSION__ = "0.0.68"
+__CODE_VERSION__ = "0.0.70"
 __CODE_DATE__    = "04.02.2026"
 
 # Protocol Constants
@@ -89,7 +89,10 @@ DEFAULT_CONFIG = {
     'cfgfile': None,
     'notui': False,
     'batch': False,
-    'ask': False
+    'ask': False,
+    'h': False,
+    'help': False,
+    'version': False
 }
 
 class Colors:
