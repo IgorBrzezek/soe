@@ -64,6 +64,26 @@ device-sim> [press CTRL-C]
 - `FIXES_TERMINAL_v0.0.2.md` - Terminal fix documentation
 - `test_device_interactive.py` - Interactive testing helper
 
+### Phase 3: Non-Blocking Architecture (Commit ce81651)
+
+**Critical Issues:**
+1. **Named Pipe Hang** - Script freezes on "Waiting for client connection"
+2. **Unresponsive Startup** - CTRL-C ignored during connection phase
+3. **Blocking Reads** - Potential hang if pipe client connects but sends nothing
+
+**Solutions Implemented:**
+- **Overlapped I/O Connection:** Replaced blocking `ConnectNamedPipe` with asynchronous overlapped wait loop (100ms intervals).
+- **Non-blocking Reads:** Used `PeekNamedPipe` to check data availability before reading.
+- **Responsive Loop:** Ensures main thread wakes up regularly to process Python signals.
+
+**Result:**
+```
+[INFO] Waiting for client connection to \\.\pipe\mydevice...
+[INFO] Press CTRL-C to cancel waiting.
+[user presses CTRL-C]
+[INFO] Connection cancelled.
+```
+
 ## Testing
 
 ### Validation Testing (Phase 1)
