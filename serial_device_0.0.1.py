@@ -498,9 +498,44 @@ Custom Commands:
                     )
                     print(f"[INFO] Named pipe created successfully")
                     print(f"[INFO] Waiting for client connection to {pipe_path}...")
-                    win32pipe.ConnectNamedPipe(self.ser_obj, None)
-                    self.pipe_connected = True
-                    print(f"[INFO] Client connected to named pipe")
+                    print(f"[INFO] Press CTRL-C to cancel waiting.")
+                    
+                    # Asynchronous connection waiting to allow CTRL-C
+                    overlapped_connect = pywintypes.OVERLAPPED()
+                    overlapped_connect.hEvent = win32event.CreateEvent(None, 1, 0, None)
+                    
+                    pending_connection = False
+                    
+                    try:
+                        win32pipe.ConnectNamedPipe(self.ser_obj, overlapped_connect)
+                    except pywintypes.error as e:
+                        if e.winerror == winerror.ERROR_IO_PENDING:
+                            pending_connection = True
+                        elif e.winerror == winerror.ERROR_PIPE_CONNECTED:
+                            self.pipe_connected = True
+                        else:
+                            raise
+                    
+                    # Wait loop if connection is pending
+                    if pending_connection:
+                        while self.keep_running:
+                            try:
+                                # Wait 100ms for connection
+                                rc = win32event.WaitForSingleObject(overlapped_connect.hEvent, 100)
+                                if rc == win32event.WAIT_OBJECT_0:
+                                    self.pipe_connected = True
+                                    break
+                                # If timeout, loop continues allowing signal handling
+                            except KeyboardInterrupt:
+                                print("\n[INFO] Connection cancelled.")
+                                self.keep_running = False
+                                return
+                    
+                    if self.pipe_connected:
+                        print(f"[INFO] Client connected to named pipe")
+                    else:
+                        return # Exit if not connected (e.g. cancelled)
+                        
                 except Exception as e:
                     print(f"[ERROR] Failed to create/connect named pipe: {e}")
                     return

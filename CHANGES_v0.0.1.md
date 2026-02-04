@@ -187,3 +187,8 @@ Possible enhancements:
    - **Problem**: On Windows, `win32file.ReadFile` blocks execution if no data is present, preventing CTRL-C signal handling.
    - **Solution**: Implemented `win32pipe.PeekNamedPipe` to check for data availability before reading.
    - **Result**: Main loop remains responsive to interrupts even when no data is arriving.
+
+### 12. **Non-Blocking Pipe Connection** (Commit update)
+   - **Problem**: `ConnectNamedPipe` blocked indefinitely on Windows if no client connected, making the script unresponsive to CTRL-C during startup.
+   - **Solution**: Implemented Overlapped I/O for connection waiting. The script now waits in 100ms intervals, checking for signals between checks.
+   - **Result**: You can now cancel the "Waiting for client connection..." state using CTRL-C.
