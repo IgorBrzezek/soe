@@ -615,7 +615,45 @@ def parse_args():
     parser.add_argument("-h", action="store_true")
     parser.add_argument("--help", action="store_true")
     
-    args = parser.parse_args()
+    # Parse arguments and handle unknown options with descriptive error
+    try:
+        # Suppress argparse's default error output by redirecting stderr temporarily
+        import io
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            args = parser.parse_args()
+        finally:
+            sys.stderr = old_stderr
+    except SystemExit as e:
+        # argparse exits with code 2 for argument errors
+        if e.code == 2:
+            # Extract the problematic argument name from sys.argv
+            unknown_arg = None
+            for i, arg in enumerate(sys.argv[1:]):
+                if arg.startswith('-') and not arg.startswith('--'):
+                    # Check short options
+                    if arg not in ['-H', '-p', '-h']:
+                        unknown_arg = arg
+                        break
+                elif arg.startswith('--'):
+                    # Check long options
+                    option_name = arg.split('=')[0]
+                    valid_options = [
+                        '--host', '--port', '--cfgfile', '--keepalive', '--secauto', '--sec', '--pwd',
+                        '--color', '--notui', '--nohead', '--echo', '--count', '--ask', '--help'
+                    ]
+                    if option_name not in valid_options:
+                        unknown_arg = option_name
+                        break
+            
+            if unknown_arg:
+                print(f"[ERROR] Unrecognized option: {unknown_arg}")
+            else:
+                print("[ERROR] Invalid command line argument.")
+            print("Use: --help for full help or -h for usage summary")
+            sys.exit(1)
+        raise
     
     if args.h or args.help:
         print(f"{__APP_NAME__} v{__CODE_VERSION__} ({__CODE_DATE__})")

@@ -1204,7 +1204,49 @@ def load_hierarchical_config():
     parser.add_argument("--help", action="store_true"); parser.add_argument("--ask", action="store_true", default=False)
     parser.add_argument("--cfgfile"); parser.add_argument("--notui", action="store_true", default=False)
     parser.add_argument("-b", "--batch", action="store_true", default=False)
-    cli_args, _ = parser.parse_known_args()
+    
+    # Parse arguments and handle unknown options with descriptive error
+    try:
+        # Suppress argparse's default error output by redirecting stderr temporarily
+        import io
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            cli_args = parser.parse_args()
+        finally:
+            sys.stderr = old_stderr
+    except SystemExit as e:
+        # argparse exits with code 2 for argument errors
+        if e.code == 2:
+            # Extract the problematic argument name from sys.argv
+            unknown_arg = None
+            for i, arg in enumerate(sys.argv[1:]):
+                if arg.startswith('-') and not arg.startswith('--'):
+                    # Check short options
+                    if arg not in ['-H', '-p', '-b', '-h']:
+                        unknown_arg = arg
+                        break
+                elif arg.startswith('--'):
+                    # Check long options
+                    option_name = arg.split('=')[0]
+                    valid_options = [
+                        '--host', '--port', '--comport', '--namedpipe', '--baud', '--line',
+                        '--keepalive', '--secauto', '--sec', '--pwd', '--log', '--logmax',
+                        '--logsizemax', '--logdata', '--logdatamax', '--logdatasizemax',
+                        '--logbufferlines', '--transferbufferlines', '--color', '--count',
+                        '--debug', '--showtransfer', '--version', '--help', '--ask', '--cfgfile', '--notui'
+                    ]
+                    if option_name not in valid_options:
+                        unknown_arg = option_name
+                        break
+            
+            if unknown_arg:
+                print(f"[ERROR] Unrecognized option: {unknown_arg}")
+            else:
+                print("[ERROR] Invalid command line argument.")
+            print("Use: --help for full help or -h for usage summary")
+            sys.exit(1)
+        raise
     
     # FIXED: Only override config with CLI values if they were EXPLICITLY provided
     # For boolean flags: default=False means not provided, True means provided

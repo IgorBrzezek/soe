@@ -774,10 +774,52 @@ def load_hierarchical_config():
     parser.add_argument('--notui', action='store_true', default=None)
     parser.add_argument('--logbufferlines', type=int)
     parser.add_argument('--transferbufferlines', type=int)
-    parser.add_argument("--cfgfile") # Added to avoid unrecognized argument error
+    parser.add_argument("--cfgfile")
     parser.add_argument('--namedpipe')
     
-    cli_args, _ = parser.parse_known_args()
+    # Parse arguments and handle unknown options with descriptive error
+    try:
+        # Suppress argparse's default error output by redirecting stderr temporarily
+        import io
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            cli_args = parser.parse_args()
+        finally:
+            sys.stderr = old_stderr
+    except SystemExit as e:
+        # argparse exits with code 2 for argument errors
+        if e.code == 2:
+            # Extract the problematic argument name from sys.argv
+            unknown_arg = None
+            for i, arg in enumerate(sys.argv[1:]):
+                if arg.startswith('-') and not arg.startswith('--'):
+                    # Check short options
+                    if arg not in ['-p', '-a', '-b', '-h']:
+                        unknown_arg = arg
+                        break
+                elif arg.startswith('--'):
+                    # Check long options
+                    option_name = arg.split('=')[0]
+                    valid_options = [
+                        '--port', '--address', '--comport', '--baud', '--line', '--keepalive',
+                        '--secauto', '--sec', '--color', '--mono', '--count', '--showtransfer',
+                        '--debug', '--pwd', '--version', '--help', '--log', '--logmax',
+                        '--logsizemax', '--logdata', '--logdatamax', '--logdatasizemax',
+                        '--batch', '--notui', '--logbufferlines', '--transferbufferlines', '--cfgfile', '--namedpipe'
+                    ]
+                    if option_name not in valid_options:
+                        unknown_arg = option_name
+                        break
+            
+            if unknown_arg:
+                print(f"[ERROR] Unrecognized option: {unknown_arg}")
+            else:
+                print("[ERROR] Invalid command line argument.")
+            print("Use: --help for full help or -h for usage summary")
+            sys.exit(1)
+        raise
+    
     for key, value in vars(cli_args).items():
         if value is not None: config[key] = value
         
