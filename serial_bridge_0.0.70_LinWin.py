@@ -858,6 +858,7 @@ class SerialBridgeNode:
                                 self.pipe_connected = True
                                 self.pipe_connect_pending = False
                                 self.log(f"Client connected to {self.pipe_path}", UiColors._UI_COL_OK_)
+                                self.log(f"DEBUG: Terminal client line status: CONNECTED", UiColors._UI_COL_INFO_, is_debug=True)
                         
                         if self.pipe_connected:
                             try:
@@ -877,12 +878,13 @@ class SerialBridgeNode:
                                                     self._write_to_file(self.logdata_file_path, s_data, True, self.args.logdatasizemax, self.args.logdatamax, strip_ansi=True)
                                             self.pipe_read_pending = False
                                         except pywintypes.error as e:
-                                            if e.winerror == winerror.ERROR_BROKEN_PIPE:
-                                                self.pipe_connected = False
-                                                self.pipe_read_pending = False
-                                                self.pipe_connect_pending = False
-                                                self.log("Client disconnected.", UiColors._UI_COL_INFO_)
-                                                win32pipe.DisconnectNamedPipe(self.ser_obj)
+                                             if e.winerror == winerror.ERROR_BROKEN_PIPE:
+                                                 self.pipe_connected = False
+                                                 self.pipe_read_pending = False
+                                                 self.pipe_connect_pending = False
+                                                 self.log("Client disconnected.", UiColors._UI_COL_INFO_)
+                                                 self.log(f"DEBUG: Terminal client line status: DISCONNECTED", UiColors._UI_COL_ERR_, is_debug=True)
+                                                 win32pipe.DisconnectNamedPipe(self.ser_obj)
                                 
                                 # Start new read if not pending
                                 if not hasattr(self, 'pipe_read_pending') or not self.pipe_read_pending:
@@ -911,6 +913,7 @@ class SerialBridgeNode:
                                             self.pipe_read_pending = False
                                             self.pipe_connect_pending = False
                                             self.log("Client disconnected.", UiColors._UI_COL_INFO_)
+                                            self.log(f"DEBUG: Terminal client line status: DISCONNECTED", UiColors._UI_COL_ERR_, is_debug=True)
                                             win32pipe.DisconnectNamedPipe(self.ser_obj)
                                         else:
                                             self.log(f"DEBUG: ReadFile start error winerror={e.winerror} msg={e}", UiColors._UI_COL_ERR_, is_debug=True)

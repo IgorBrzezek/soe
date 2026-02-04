@@ -1,8 +1,8 @@
-# Serial over Ethernet (SoE) - Complete Documentation (v2)
+# Serial over Ethernet (SoE) - Complete Documentation
 
 **Author:** Igor Brzezek  
-**Latest Version:** 0.0.67  
-**Last Updated:** February 3, 2026  
+**Latest Version:** 0.0.70  
+**Last Updated:** February 4, 2026  
 **Platform:** Windows / Linux (Cross-platform)
 
 ---
@@ -108,12 +108,13 @@ The SoE system consists of **three main components** that work together in diffe
 │           │ Serial Data (bidirectional)                             │
 │           ▼                                                         │
 │  ┌───────────────────────────────────────────┐                      │
-│  │ SoE SERVER (0.0.52b)                      │                      │
+│  │ SoE SERVER (0.0.53)                       │                      │
 │  │                                           │                      │
 │  │ Listens on TCP port                       │                      │
 │  │ Exposes IP:Port for clients               │                      │
 │  │ Supports SSL/TLS encryption               │                      │
 │  │ Password authentication                   │                      │
+│  │ Supports Named Pipes (Windows)            │                      │
 │  └────────────────┬──────────────────────────┘                      │
 │                   │                                                 │
 └───────────────────┼─────────────────────────────────────────────────┘
@@ -136,7 +137,7 @@ The SoE system consists of **three main components** that work together in diffe
 │                │ │                │ │                │
 │ ┌────────────┐ │ │ ┌────────────┐ │ │ ┌────────────┐ │
 │ │ SoE CLIENT │ │ │ │ SoE CLIENT │ │ │ │ SoE BRIDGE │ │
-│ │ (0.0.56)   │ │ │ │ (0.0.56)   │ │ │ │ (0.0.67)   │ │
+│ │ (0.0.56)   │ │ │ │ (0.0.56)   │ │ │ │ (0.0.70)   │ │
 │ │            │ │ │ │            │ │ │ │            │ │
 │ │ Connects   │ │ │ │ Connects   │ │ │ │ Connects   │ │
 │ │ to server  │ │ │ │ to server  │ │ │ │ to server  │ │
@@ -194,7 +195,7 @@ KEY:
 │           │ Bytes (bidirectional)                                        │
 │           ▼                                                              │
 │  ┌────────────────────────────────────────────┐                          │
-│  │ SoE SERVER (0.0.52b)                       │                          │
+│  │ SoE SERVER (0.0.53)                       │                          │
 │  │                                            │                          │
 │  │ ROLE:                                      │                          │
 │  │ 1. Read data from serial port              │                          │
@@ -267,7 +268,7 @@ KEY:
 ║  ─────────────────────────────────────────────────────────────────────  ║
 ║                                                                         ║
 ║  SoE SERVER         │ Listener  │ Gateway       │ Where serial device   ║
-║  (0.0.52b)          │ (TCP)     │ to hardware   │ is physically         ║
+║  (0.0.53)          │ (TCP)     │ to hardware   │ is physically         ║
 ║                     │           │               │ connected             ║
 ║  Where to run:      │           │               │                       ║
 ║  Computer A (with   │ • Listens on TCP port     │ Multiple users can    ║
@@ -289,7 +290,7 @@ KEY:
 ║  ────────────────────────────────────────────────────────────────────   ║
 ║                                                                         ║
 ║  SoE BRIDGE         │ Connector │ Virtual       │ Where legacy app      ║
-║  (0.0.67)           │ (TCP)     │ serial device │ expects local serial  ║
+║  (0.0.70)           │ (TCP)     │ serial device │ expects local serial  ║
 ║                     │           │               │ port/pipe             ║
 ║  Where to run:      │ • Connects to server      │                       ║
 ║  Computer C         │ • Creates local serial    │ Automates legacy      ║
@@ -305,7 +306,7 @@ KEY:
 
 ## Component Breakdown
 
-### 1. **SoE Server** (`serial_server_0.0.52b_LinWin.py`)
+### 1. **SoE Server** (`serial_server_0.0.53_LinWin.py`)
 
 #### Purpose
 Acts as a **TCP server** that listens for incoming connections and bridges a local serial port to remote clients.
@@ -313,7 +314,7 @@ Acts as a **TCP server** that listens for incoming connections and bridges a loc
 #### What It Does
 - **Listens** on a specified TCP port (e.g., 10001)
 - **Accepts** multiple simultaneous client connections
-- **Forwards** data bidirectionally between the local serial port and each connected client
+- **Forwards** data bidirectionally between the local serial port (or Named Pipe) and each connected client
 - **Authenticates** clients using optional password protection
 - **Encrypts** communication using SSL/TLS
 - **Monitors** the system with a rich text UI (TUI)
@@ -325,6 +326,7 @@ Acts as a **TCP server** that listens for incoming connections and bridges a loc
 - **Custom Protocol:** Handshake protocol (`__#...#__`) for version exchange and keepalive
 - **Flexible Configuration:** CLI arguments or INI-style config file
 - **Cross-platform:** Works on Windows (COM1, COM2, etc.) and Linux (/dev/ttyS0, /dev/ttyUSB0, etc.)
+- **Named Pipe Support:** (Windows) Can use Named Pipes instead of physical serial ports.
 
 #### When to Use
 - A serial device (e.g., industrial PLC, network switch) is physically connected to **Computer A**
@@ -333,7 +335,7 @@ Acts as a **TCP server** that listens for incoming connections and bridges a loc
 
 #### Example Configuration
 ```bash
-python serial_server_0.0.52b_LinWin.py \
+python serial_server_0.0.53_LinWin.py \
   --port 10001 \
   --comport COM1 \
   --baud 9600 \
@@ -387,7 +389,7 @@ python serial_client_0.0.56_LinWin.py --cfgfile soeclient.conf
 
 ---
 
-### 3. **SoE Bridge** (`serial_bridge_0.0.67_LinWin.py`)
+### 3. **SoE Bridge** (`serial_bridge_0.0.70_LinWin.py`)
 
 #### Purpose
 Acts as a **TCP client** that connects to a remote SoE Server and bridges the connection to a local serial port or named pipe.
@@ -425,16 +427,16 @@ Named pipes are a Windows feature that emulate serial ports for virtual machines
 #### Example Usage
 ```bash
 # Bridge to physical serial port
-python serial_bridge_0.0.67_LinWin.py -H 192.168.1.10 -p 10001 --comport COM17
+python serial_bridge_0.0.70_LinWin.py -H 192.168.1.10 -p 10001 --comport COM17
 
 # Bridge to named pipe (Windows VM)
-python serial_bridge_0.0.67_LinWin.py -H 192.168.1.10 -p 10001 --namedpipe VMSerial
+python serial_bridge_0.0.70_LinWin.py -H 192.168.1.10 -p 10001 --namedpipe VMSerial
 
 # Secure connection
-python serial_bridge_0.0.67_LinWin.py -H 192.168.1.10 -p 10001 --comport COM17 --secauto --pwd MyPwd
+python serial_bridge_0.0.70_LinWin.py -H 192.168.1.10 -p 10001 --comport COM17 --secauto --pwd MyPwd
 
 # Check server (query mode)
-python serial_bridge_0.0.67_LinWin.py -H 192.168.1.10 -p 10001 --ask
+python serial_bridge_0.0.70_LinWin.py -H 192.168.1.10 -p 10001 --ask
 ```
 
 ---
@@ -449,7 +451,7 @@ python serial_bridge_0.0.67_LinWin.py -H 192.168.1.10 -p 10001 --ask
                                        ──[Network]── [Engineer Laptop 2]
                                        ──[Network]── [Engineer Laptop 3]
 
-Server PC:  python serial_server_0.0.52b_LinWin.py --port 10001 --comport COM1
+Server PC:  python serial_server_0.0.53_LinWin.py --port 10001 --comport COM1
 Laptop 1:   python serial_client_0.0.56_LinWin.py -H 192.168.1.100 -p 10001
 Laptop 2:   python serial_client_0.0.56_LinWin.py -H 192.168.1.100 -p 10001
 Laptop 3:   python serial_client_0.0.56_LinWin.py -H 192.168.1.100 -p 10001
@@ -463,7 +465,7 @@ Laptop 3:   python serial_client_0.0.56_LinWin.py -H 192.168.1.100 -p 10001
                                                                       ──[Admin Workstation]
                                                                       ──[Monitoring System]
 
-Management PC:   python serial_server_0.0.52b_LinWin.py --port 9600 --comport COM1 --sec auto --pwd AdminPwd
+Management PC:   python serial_server_0.0.53_LinWin.py --port 9600 --comport COM1 --sec auto --pwd AdminPwd
 Admin 1:         python serial_client_0.0.56_LinWin.py -H datacenter.local -p 9600 --secauto --pwd AdminPwd
 ```
 
@@ -474,8 +476,8 @@ Admin 1:         python serial_client_0.0.56_LinWin.py -H datacenter.local -p 96
 [Physical Device] ──COM1── [Host PC] ──[Virtual Network]── [QEMU VM]
                                                              (named pipe)
 
-Host PC:   python serial_bridge_0.0.67_LinWin.py -H localhost -p 10001 --namedpipe VMSerial
-Server PC: python serial_server_0.0.52b_LinWin.py --port 10001 --comport COM1
+Host PC:   python serial_bridge_0.0.70_LinWin.py -H localhost -p 10001 --namedpipe VMSerial
+Server PC: python serial_server_0.0.53_LinWin.py --port 10001 --comport COM1
 VM:        (connect to \\.\pipe\VMSerial as /dev/ttyS0 equivalent)
 ```
 
@@ -485,7 +487,7 @@ VM:        (connect to \\.\pipe\VMSerial as /dev/ttyS0 equivalent)
 ```
 [Test Equipment] ──COM2── [Site A Server] ──[WAN/Internet]── [Site B Testing PC]
 
-Site A:   python serial_server_0.0.52b_LinWin.py --port 10001 --comport COM2 --sec auto --pwd TestPwd
+Site A:   python serial_server_0.0.53_LinWin.py --port 10001 --comport COM2 --sec auto --pwd TestPwd
 Site B:   python serial_client_0.0.56_LinWin.py -H siteA.example.com -p 10001 --secauto --pwd TestPwd
 ```
 
@@ -498,7 +500,7 @@ Site B:   python serial_client_0.0.56_LinWin.py -H siteA.example.com -p 10001 --
 #### Step 1: Start SoE Server on the machine with the physical serial port
 ```bash
 # On Computer A (which has the serial device on COM1)
-python serial_server_0.0.52b_LinWin.py \
+python serial_server_0.0.53_LinWin.py \
   --port 10001 \
   --comport COM1 \
   --baud 9600 \
@@ -551,16 +553,16 @@ pip install pywin32
 
 ### Step 2: Download the Scripts
 All three scripts are standalone Python files. Simply place them in your working directory:
-- `serial_server_0.0.52b_LinWin.py`
+- `serial_server_0.0.53_LinWin.py`
 - `serial_client_0.0.56_LinWin.py`
-- `serial_bridge_0.0.67_LinWin.py`
+- `serial_bridge_0.0.70_LinWin.py`
 
 ### Step 3: Verify Installation
 Test each script with the help command:
 ```bash
-python serial_server_0.0.52b_LinWin.py --help
+python serial_server_0.0.53_LinWin.py --help
 python serial_client_0.0.56_LinWin.py --help
-python serial_bridge_0.0.67_LinWin.py --help
+python serial_bridge_0.0.70_LinWin.py --help
 ```
 
 ---
@@ -572,12 +574,12 @@ All three components support SSL/TLS for encrypted communication:
 
 **Auto-generate certificates (self-signed):**
 ```bash
-python serial_server_0.0.52b_LinWin.py --port 10001 --comport COM1 --secauto
+python serial_server_0.0.53_LinWin.py --port 10001 --comport COM1 --secauto
 ```
 
 **Use custom certificates:**
 ```bash
-python serial_server_0.0.52b_LinWin.py --port 10001 --comport COM1 --sec /path/to/cert.pem
+python serial_server_0.0.53_LinWin.py --port 10001 --comport COM1 --sec /path/to/cert.pem
 ```
 
 **Client connection (with auto certificate acceptance):**
@@ -590,7 +592,7 @@ Protect access with a password:
 
 **Server:**
 ```bash
-python serial_server_0.0.52b_LinWin.py --port 10001 --comport COM1 --pwd MySecretPassword
+python serial_server_0.0.53_LinWin.py --port 10001 --comport COM1 --pwd MySecretPassword
 ```
 
 **Client:**
@@ -708,7 +710,7 @@ pwd = MySecurePassword
 CLI arguments **override** configuration file values:
 ```bash
 # Load from config but override port
-python serial_server_0.0.52b_LinWin.py --cfgfile soeserver.conf --port 9999
+python serial_server_0.0.53_LinWin.py --cfgfile soeserver.conf --port 9999
 ```
 
 ---
@@ -723,7 +725,7 @@ python serial_server_0.0.52b_LinWin.py --cfgfile soeserver.conf --port 9999
 **Solution:**
 ```bash
 # Change to a different port
-python serial_server_0.0.52b_LinWin.py --port 10002 --comport COM1
+python serial_server_0.0.53_LinWin.py --port 10002 --comport COM1
 
 # On Linux, find and kill the process using the port:
 lsof -i :10001
@@ -776,7 +778,7 @@ python serial_client_0.0.56_LinWin.py -H 192.168.1.10 -p 10001 --secauto
 **Problem:** Client cannot connect to server.
 
 **Checklist:**
-- Server is running: `python serial_server_0.0.52b_LinWin.py --port 10001 ...`
+- Server is running: `python serial_server_0.0.53_LinWin.py --port 10001 ...`
 - Server IP address is correct (use `ipconfig` on Windows, `ifconfig` on Linux)
 - Server port matches client port
 - Firewall allows the port (port 10001 must be open)
@@ -803,7 +805,7 @@ sudo firewall-cmd --reload
 ping 192.168.1.10
 
 # Monitor server logs with debug mode
-python serial_server_0.0.52b_LinWin.py --debug ...
+python serial_server_0.0.53_LinWin.py --debug ...
 
 # Check for packet loss on network
 ```
@@ -826,7 +828,7 @@ python serial_server_0.0.52b_LinWin.py --debug ...
 **Solution:**
 ```bash
 # Verify baud rate and settings match device
-python serial_server_0.0.52b_LinWin.py \
+python serial_server_0.0.53_LinWin.py \
   --port 10001 \
   --comport COM1 \
   --baud 115200 \

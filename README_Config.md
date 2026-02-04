@@ -1,8 +1,8 @@
 # Serial over Ethernet (SoE) Configuration Guide
 
 **Applicable Versions:**
-*   SoE Server v0.0.52b+
-*   SoE Bridge v0.0.67+
+*   SoE Server v0.0.53+
+*   SoE Bridge v0.0.70+
 *   SoE Client v0.0.56+
 
 ## 1. Introduction
@@ -57,6 +57,7 @@ The file is divided into sections, primarily `[DEFAULT]` for settings and `[COLO
 | `keepalive` | Int | Protocol heartbeat interval in seconds. Default: `120`. |
 | **Serial Port** | | |
 | `comport` | String | Serial port (e.g., `COM1` or `/dev/ttyUSB0`). |
+| `namedpipe`| String | **(Windows Only)** Named Pipe name. |
 | `baud` | Int | Baud rate (e.g., `9600`, `115200`). |
 | `line` | String | Line params: Bits/Parity/Stop/Flow (e.g., `8N1N`). |
 | **Security** | | |

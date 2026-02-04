@@ -1,9 +1,34 @@
 # Serial over Ethernet Bridge (SoE Bridge)
 
 **Program:** `serial_client.py`
-**Version:** 0.0.67
+**Version:** 0.0.70
 **Platform:** Windows / Linux (Cross-platform)
 **Author:** Igor Brzezek
+**Release Date:** February 4, 2026
+
+## Version History
+
+### v0.0.70 (February 4, 2026) - [FIX: Proper DEFAULT_CONFIG Fallback]
+**Major Improvements:**
+- **Comprehensive Argument Validation**: Added extensive validation for all parameters with detailed error messages
+- **Fixed Configuration Loading**: Corrected precedence handling (CLI > config file > defaults)
+- **Enhanced Error Handling**: Improved socket error handling and more reliable shutdown procedures
+- **Better Debugging**: Added enhanced debug logging for pipe connections and server status
+
+**Bug Fixes:**
+- Fixed critical DEFAULT_CONFIG fallback issue where CLI arguments incorrectly overrode config file defaults
+- Resolved socket handling problems during application shutdown
+- Improved server disconnect detection and handling
+- Enhanced Named Pipe connection status reporting
+
+**Stability Improvements:**
+- Faster application exit on Ctrl+C (immediate socket closure instead of graceful disconnect)
+- Better resource cleanup and error recovery
+- More robust exception handling throughout the application
+- Improved argument parsing with better unknown option detection
+
+### v0.0.67 (February 2, 2026) - [NEW: Full Config Support + Custom Colors]
+Previous version with configuration file support and customizable TUI colors
 
 ## 0. Suggestion: 
 
@@ -25,9 +50,11 @@ The "LinWin" suffix indicates native support for both **Linux** (e.g., `/dev/tty
     *   **Physical Serial Port:** Bridges network data to a real COM/TTY port.
     *   **Windows Named Pipes:** Creates a virtual pipe (e.g., `\\.\pipe\MyPipe`) for software that requires serial-like communication (common in Virtual Machines like QEMU/VMware).
 *   **Advanced TUI:** Split-screen interface for monitoring system logs and raw data traffic simultaneously.
-*   **Security:** Full SSL/TLS client support (connects to secure SoE Servers).
-*   **Protocol Handshake:** Automatically exchanges version info and serial parameters with the SoE Server.
-*   **Logging:** Robust file logging with rotation for both events and binary traffic.
+*   **Enhanced Security:** Full SSL/TLS client support with improved error handling and validation.
+*   **Robust Protocol Handshake:** Automatically exchanges version info and serial parameters with SoE Server.
+*   **Comprehensive Validation:** Extensive argument and parameter validation with detailed error messages.
+*   **Enhanced Logging:** Robust file logging with rotation, improved debugging capabilities, and better error reporting.
+*   **Stability Improvements:** Better socket handling, faster shutdown procedures, and more reliable resource cleanup.
 
 ---
 
@@ -62,9 +89,32 @@ python serial_client.py -H 192.168.1.10 -p 10001 --namedpipe VMSerial
 ```
 
 ### Modes of Operation
-1.  **TUI Mode (Default):** Interactive split-screen interface.
-2.  **Batch Mode (`-b` / `--batch`):** Silent background operation.
+1.  **TUI Mode (Default):** Interactive split-screen interface with real-time monitoring.
+2.  **Batch Mode (`-b` / `--batch`):** Silent background operation with enhanced error handling.
 3.  **Query Mode (`--ask`):** Connects briefly to check the server's version and configured serial parameters, then exits.
+
+### Validation & Error Handling
+Version 0.0.70 includes comprehensive validation of all configuration parameters:
+
+**Parameter Validation:**
+- **Port Range**: Validates TCP ports are within 1-65535 range
+- **Baud Rates**: Ensures standard baud rates (300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 115200, 230400, 460800, 921600)
+- **Line Format**: Validates 4-character serial parameter format (DataBits[5-8] + Parity[N/O/E/M/S] + StopBits[1/2] + Flow[N/X/H/R])
+- **SSL Options**: Prevents conflicting SSL mode selections
+- **Interface Selection**: Ensures only one of `--comport` or `--namedpipe` is specified
+- **Value Ranges**: Validates all numeric parameters (keepalive, buffer sizes, etc.)
+
+**Enhanced Error Messages:**
+- Clear, descriptive error messages for validation failures
+- Specific guidance for correcting configuration errors
+- Unknown argument detection with helpful suggestions
+- Better error context for troubleshooting
+
+**Stability Improvements:**
+- Faster application shutdown with immediate socket closure on Ctrl+C
+- Improved server disconnect detection and handling
+- Better resource cleanup and error recovery
+- Enhanced debugging for Named Pipe connections
 
 ---
 
@@ -186,8 +236,51 @@ python serial_bridge.py \
 ```
 
 ### Example 3: Check Server Status
-Quickly check if the remote server is up and what COM port it's using.
+Quickly check if a remote server is up and what COM port it's using.
 ```bash
 python serial_bridge.py -H 192.168.1.50 -p 5000 --ask
 ```
 *Output:* `Server version: 0.0.52b, Params: COM1 9600 8N1N`
+
+### Example 4: Debugging with Enhanced Validation
+Start bridge with debug output to see validation and connection details:
+```bash
+python serial_bridge.py -H 192.168.1.50 -p 5000 --comport COM1 --debug --showtransfer ascii,all
+```
+
+---
+
+## 9. Migration Guide (v0.0.67 → v0.0.70)
+
+### Breaking Changes
+None - v0.0.70 maintains full backward compatibility.
+
+### Configuration Loading Fix
+**Critical Fix**: v0.0.67 had incorrect fallback behavior where CLI arguments would override config file values even when not explicitly provided. v0.0.70 implements proper precedence:
+1. **Command Line Arguments** (highest priority)
+2. **Configuration File** 
+3. **DEFAULT_CONFIG** (fallback)
+
+### New Validation Features
+- **Comprehensive Parameter Checking**: All parameters are now validated with detailed error messages
+- **Standard Baud Rate Validation**: Only standard baud rates are accepted
+- **Port Range Validation**: TCP ports must be within 1-65535
+- **Serial Line Format**: Validates 4-character format (DataBits/Parity/Stop/Flow)
+- **Mutual Exclusion Checks**: Prevents conflicting options
+
+### Enhanced Error Handling
+- **Better Error Messages**: Clear, descriptive errors with specific guidance
+- **Unknown Argument Detection**: Helpful suggestions for typos in CLI arguments
+- **Improved Socket Handling**: Better disconnect detection and recovery
+- **Faster Shutdown**: Ctrl+C now exits immediately without graceful disconnect attempt
+
+### Stability Improvements
+- **Resource Cleanup**: More reliable cleanup of sockets, pipes, and events
+- **Server Disconnect Detection**: Improved detection and logging of server disconnections
+- **Enhanced Debugging**: Better debug messages for Named Pipe connections and protocol issues
+
+### Recommended Actions
+1. **Test Existing Configurations** - All should work unchanged but benefit from better validation
+2. **Review Error Messages** - New validation may reveal previously unnoticed configuration issues
+3. **Update Scripts** - Consider using the enhanced error messages for better troubleshooting
+4. **Debug Mode** - Use `--debug` flag for detailed connection and validation information
