@@ -45,6 +45,7 @@ except ImportError:
         sys.stderr.write("[ERROR] Missing 'pyserial' library.\n")
     sys.exit(1)
 
+# --- Author ---
 __APP_NAME__    = "Serial over Ethernet Bridge"
 __CODE_AUTHOR__  = "Igor Brzezek"
 __CODE_VERSION__ = "0.0.70"

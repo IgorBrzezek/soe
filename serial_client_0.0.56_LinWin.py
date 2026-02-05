@@ -42,7 +42,7 @@ else:
     import tty
     import termios
 
-# --- Constants & Protocol Commands ---
+# --- Author ---
 __APP_NAME__    = "Serial over Ethernet Client"
 __CODE_VERSION__ = "0.0.56"
 __CODE_DATE__    = "03.02.2026"
@@ -64,6 +64,7 @@ SEC_ERROR_MSG  = b"__#SECERROR#__"
 BAD_PWD_MSG    = b"__#BADPWD#__"
 BLOCKED_MSG    = b"__#IPBLOCKED#__"
 
+# --- Constants & Protocol Commands ---
 class Colors:
     RESET       = "\033[0m"
     RED         = "\033[91m"

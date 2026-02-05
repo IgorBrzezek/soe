@@ -76,7 +76,7 @@ if sys.platform == "win32" and '--namedpipe' in sys.argv and not HAS_WIN32_PIPE:
     print("  pip install pywin32\n")
     sys.exit(1)
 
-# --- Constants & Commands ---
+# --- Author ---
 __CODE_NAME__    = "Serial over Ethernet Server"
 __CODE_AUTHOR__  = "Igor Brzezek"
 __CODE_VERSION__ = "0.0.53"
@@ -97,6 +97,7 @@ SEC_ERROR_MSG  = b"__#SECERROR#__"
 BAD_PWD_MSG    = b"__#BADPWD#__"
 BLOCKED_MSG    = b"__#IPBLOCKED#__"
 
+# --- Constants & Commands ---
 class Colors:
     RESET       = "\033[0m"
     RED         = "\033[91m"
@@ -219,8 +220,9 @@ class NamedPipeWrapper:
         
         try:
             # Peek to see if data is available
-            result, data, _ = win32pipe.PeekNamedPipe(self.pipe_handle, 0)
-            return result
+            # PeekNamedPipe returns (data, bytes_avail, message_bytes_left)
+            _, avail, _ = win32pipe.PeekNamedPipe(self.pipe_handle, 0)
+            return avail
         except:
             return 0
     
@@ -524,7 +526,7 @@ def generate_self_signed_cert():
 DEFAULT_CONFIG = {
     'port': None,
     'address': "0.0.0.0",
-    'comport': "COM1" if sys.platform == "win32" else "/dev/ttyS0",
+    'comport': None,
     'baud': 9600,
     'line': "8N1N",
     'keepalive': 120,
@@ -555,6 +557,10 @@ DEFAULT_CONFIG = {
 
 def validate_args(args):
     """Validate command line arguments and configuration values"""
+    
+    # Apply default comport if neither comport nor namedpipe is specified
+    if args.comport is None and args.namedpipe is None:
+        args.comport = "COM1" if sys.platform == "win32" else "/dev/ttyS0"
     
     # Check port is provided and valid
     if args.port is None:
@@ -821,7 +827,11 @@ def load_hierarchical_config():
         raise
     
     for key, value in vars(cli_args).items():
-        if value is not None: config[key] = value
+        if value is not None:
+            config[key] = value
+            # Handle mutual exclusion between comport and namedpipe
+            if key == 'namedpipe': config['comport'] = None
+            if key == 'comport': config['namedpipe'] = None
         
     return argparse.Namespace(**config)
 

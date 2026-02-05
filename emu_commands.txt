@@ -1,0 +1,86 @@
+# Custom Device Commands File
+# Format: "console_command","linux_command","windows_command"
+# Lines starting with # are comments
+# Use \" for quotes in commands
+# Use \\ for backslashes in commands
+# 
+# Organized into 6 Logical Groups (50 commands per platform):
+# ==============================================================================
+
+# GROUP 1: System Information & Hardware (10 commands)
+# ==============================================================================
+"show cpu-usage","top -b -n 1 | head -10","wmic cpu get Name,LoadPercentage /format:list"
+"show load-average","cat /proc/loadavg","wmic os get NumberOfProcesses /format:list"
+"show kernel-version","uname -r","systeminfo | findstr /C:\"OS Name\" /C:\"OS Version\""
+"show system-architecture","uname -m","wmic os get OSArchitecture /format:list"
+"show uptime","uptime -p","net statistics workstation | findstr Statistics"
+"show system-time","date +%T","echo %time%"
+"show system-date","date +%Y-%m-%d","echo %date%"
+"show hostname-short","hostname -s","hostname"
+"show system-manufacturer","cat /sys/class/dmi/id/sys_vendor","wmic csproduct get Vendor"
+"show system-model","cat /sys/class/dmi/id/product_name","wmic csproduct get Name"
+
+# GROUP 2: Network Configuration & Diagnostics (10 commands)
+# ==============================================================================
+"show ip-route","ip route show","route print -4"
+"show ip-link","ip link show","ipconfig /all"
+"show ip-addr","ip addr show","ipconfig"
+"show arp-table","ip neigh show","arp -a"
+"show network-sockets","ss -tulwn","netstat -anob"
+"show open-ports","ss -ltnp","netstat -an | findstr LISTENING"
+"show network-connections","netstat -an","netstat -ano"
+"show network-firewall","iptables -L -n -v","netsh advfirewall firewall show rule name=all"
+"show network-routes","ip route","route print -4"
+
+# GROUP 3: Process & Service Management (10 commands)
+# ==============================================================================
+"show all-processes","ps aux","tasklist"
+"show process-tree","pstree -p","tasklist /v"
+"show process-users","ps -eo user,pid","tasklist /fi \"USERNAME ne N/A\""
+"show process-threads","ps -eLf","wmic process get ThreadCount"
+"show process-cpu","ps aux --sort=-%cpu | head -10","wmic process get Name,ProcessId,WorkingSetSize /format:list"
+"show process-memory","ps aux --sort=-%mem | head -10","tasklist /fi \"MEMUSAGE gt 1000\""
+"show process-start-time","ps -eo pid,lstart","wmic process get Name,CreationDate"
+"show services-status","systemctl list-units --type=service","sc query state=all"
+"show services-running","systemctl list-units --type=service --state=running","sc query state= running"
+"show running-services","tasklist /svc","tasklist /svc"
+
+# GROUP 4: User & Security Management (10 commands)
+# ==============================================================================
+"show current-user","whoami","whoami"
+"show user-groups","groups","net user %USERNAME% | findstr \"Local Group\""
+"show user-id","id -u","net user %USERNAME%"
+"show login-history","last","query user"
+"show sudo-users","sudo -l -U %USERNAME%","net localgroup Administrators"
+"show user-home","echo $HOME","echo %USERPROFILE%"
+"show user-shell","echo $SHELL","echo %COMSPEC%"
+"show user-path","echo $PATH","echo %PATH%"
+"show local-users","cat /etc/passwd","net user"
+"show admin-users","cat /etc/group | grep admin","net localgroup Administrators"
+
+# GROUP 5: Storage & File System (10 commands)
+# ==============================================================================
+"show mounted-filesystems","df -hT","wmic logicaldisk get Name,FileSystem,Size,FreeSpace"
+"show disk-partitions","lsblk -f","diskpart /s list disk"
+"show inodes","df -i","fsutil volume diskfree C:"
+"show swap-usage","swapon --show","wmic pagefile get Name,Size,AllocatedUsage /format:list"
+"show filesystem-info","df -i","fsutil fsinfo drives"
+"show disk-usage","df -h","wmic logicaldisk get Size,FreeSpace"
+"show volume-labels","blkid","wmic logicaldisk get VolumeName"
+"show partition-table","parted -l","diskpart /s list partition"
+"show mount-points","mount -t | grep -v \"type\"","mountvol"
+"show disk-space","df -h","wmic logicaldisk get Size,FreeSpace"
+
+# GROUP 6: System Diagnostics & Boot (10 commands)
+# ==============================================================================
+"show kernel-modules","lsmod | head -20","wmic path win32_systemdriver where \"State='Running'\" get Name,DisplayName"
+"show kernel-parameters","cat /proc/cmdline","wmic os get BootupCommand"
+"show boot-messages","dmesg | tail -30","wevtutil qe System /c:10 /rd:true /f:text"
+"show system-uptime","uptime -p","systeminfo | findstr /B /C:\"System Boot Time\""
+"show boot-time","uptime -s","systeminfo | findstr /B /C:\"System Boot Time\""
+"show boot-config","cat /boot/grub/grub.cfg | head -20","bcdedit /enum"
+"show kernel-version-full","uname -a","systeminfo | findstr /C:\"OS Name\" /C:\"OS Version\""
+"show bios-version","cat /sys/class/dmi/id/bios_version","wmic bios get SMBIOSBIOSVersion"
+"show bios-date","cat /sys/class/dmi/id/bios_date","wmic bios get ReleaseDate"
+
+# End of file
